@@ -38,7 +38,6 @@ export function useCloudData() {
         apiClient.getCompanies(),
         apiClient.getTasks()
       ])
-      console.log('Fetched cloud data:', { contactsRes, companiesRes, tasksRes })
       const contacts = toCamelCaseArray(contactsRes.contacts)
       const companies = toCamelCaseArray(companiesRes.companies)
       const tasks = toCamelCaseArray(tasksRes.tasks)
@@ -57,21 +56,20 @@ export function useCloudData() {
 
   // Load data when user changes
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       loadData()
     } else {
       setContacts([])
       setCompanies([])
       setTasks([])
     }
-  }, [user])
+  }, [user?.id])
 
   // console.log(contacts, companies, tasks)s
   // Contact operations
   const addContact = async (contactData: Omit<Contact, 'id' | 'createdAt' | 'lastContact'>) => {
     try {
       const { contact } = await apiClient.createContact(contactData)
-      console.log('Created contact:', contact)
       setContacts(prev => [...prev, toCamelCase(contact)])
       return contact
     } catch (error: any) {
@@ -105,7 +103,6 @@ export function useCloudData() {
   const addCompany = async (companyData: Omit<Company, 'id' | 'createdAt'>) => {
     try {
       const { company } = await apiClient.createCompany(companyData)
-      console.log('Created company:', company)
       setCompanies(prev => [...prev, toCamelCase(company)])
       return company
     } catch (error: any) {
