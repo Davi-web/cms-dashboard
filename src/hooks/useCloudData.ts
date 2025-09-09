@@ -2,6 +2,21 @@ import { useState, useEffect } from 'react'
 import { apiClient, type Contact, type Company, type Task } from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
 
+
+// Convert snake_case → camelCase
+const toCamelCase = (obj: any) => {
+  const result: any = {};
+  for (const key in obj) {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    result[camelKey] = obj[key];
+  }
+  return result;
+};
+
+// Convert array of objects
+const toCamelCaseArray = (arr: any[]) => arr.map(toCamelCase);
+
+
 export function useCloudData() {
   const { user } = useAuth()
   const [contacts, setContacts] = useState<Contact[]>([])
@@ -23,10 +38,15 @@ export function useCloudData() {
         apiClient.getCompanies(),
         apiClient.getTasks()
       ])
+      console.log('Fetched cloud data:', { contactsRes, companiesRes, tasksRes })
+      const contacts = toCamelCaseArray(contactsRes.contacts)
+      const companies = toCamelCaseArray(companiesRes.companies)
+      const tasks = toCamelCaseArray(tasksRes.tasks)
 
-      setContacts(contactsRes.contacts || [])
-      setCompanies(companiesRes.companies || [])
-      setTasks(tasksRes.tasks || [])
+
+      setContacts(contacts || [])
+      setCompanies(companies || [])
+      setTasks(tasks|| [])
     } catch (error: any) {
       console.error('Error loading data:', error)
       setError(error.message || 'Failed to load data')
@@ -46,12 +66,13 @@ export function useCloudData() {
     }
   }, [user])
 
+  // console.log(contacts, companies, tasks)s
   // Contact operations
   const addContact = async (contactData: Omit<Contact, 'id' | 'createdAt' | 'lastContact'>) => {
     try {
       const { contact } = await apiClient.createContact(contactData)
       console.log('Created contact:', contact)
-      setContacts(prev => [...prev, contact])
+      setContacts(prev => [...prev, toCamelCase(contact)])
       return contact
     } catch (error: any) {
       console.error('Error creating contact:', error, contactData)
@@ -62,7 +83,7 @@ export function useCloudData() {
   const updateContact = async (id: string, updates: Partial<Contact>) => {
     try {
       const { contact } = await apiClient.updateContact(id, updates)
-      setContacts(prev => prev.map(c => c.id === id ? contact : c))
+      setContacts(prev => prev.map(c => c.id === id ? toCamelCase(contact) : c))
       return contact
     } catch (error: any) {
       console.error('Error updating contact:', error)
@@ -85,7 +106,7 @@ export function useCloudData() {
     try {
       const { company } = await apiClient.createCompany(companyData)
       console.log('Created company:', company)
-      setCompanies(prev => [...prev, company])
+      setCompanies(prev => [...prev, toCamelCase(company)])
       return company
     } catch (error: any) {
       console.error('Error creating company:', error)
@@ -96,7 +117,7 @@ export function useCloudData() {
   const updateCompany = async (id: string, updates: Partial<Company>) => {
     try {
       const { company } = await apiClient.updateCompany(id, updates)
-      setCompanies(prev => prev.map(c => c.id === id ? company : c))
+      setCompanies(prev => prev.map(c => c.id === id ? toCamelCase(company) : c))
       return company
     } catch (error: any) {
       console.error('Error updating company:', error)
@@ -118,7 +139,7 @@ export function useCloudData() {
   const addTask = async (taskData: Omit<Task, 'id' | 'createdAt'>) => {
     try {
       const { task } = await apiClient.createTask(taskData)
-      setTasks(prev => [...prev, task])
+      setTasks(prev => [...prev, toCamelCase(task)])
       return task
     } catch (error: any) {
       console.error('Error creating task:', error)
@@ -129,7 +150,7 @@ export function useCloudData() {
   const updateTask = async (id: string, updates: Partial<Task>) => {
     try {
       const { task } = await apiClient.updateTask(id, updates)
-      setTasks(prev => prev.map(t => t.id === id ? task : t))
+      setTasks(prev => prev.map(t => t.id === id ? toCamelCase(task) : t))
       return task
     } catch (error: any) {
       console.error('Error updating task:', error)

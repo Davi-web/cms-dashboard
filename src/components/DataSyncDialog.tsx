@@ -4,14 +4,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Alert, AlertDescription } from './ui/alert'
 import { Progress } from './ui/progress'
 import { CheckCircle, AlertCircle, Cloud, HardDrive } from 'lucide-react'
-import { apiClient } from '../utils/api'
+import { apiClient, type Company, type Contact, type Task } from '../utils/api'
 
 interface DataSyncDialogProps {
   open: boolean
   onClose: () => void
-  localContacts: any[]
-  localCompanies: any[]
-  localTasks: any[]
+  localContacts: Contact[]
+  localCompanies: Company[]
+  localTasks: Task[]
   onSyncComplete: () => void
 }
 

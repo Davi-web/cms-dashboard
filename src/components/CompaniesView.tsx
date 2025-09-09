@@ -60,7 +60,7 @@ export function CompaniesView() {
 
   // Use cloud data if authenticated, otherwise use local storage
   const cloudData = useCloudData();
-  console.log("Rendering companiesview", cloudData);
+  // console.log("Rendering companiesview", cloudData);
 
   const companies = user ? cloudData.companies : localCompanies;
   const contacts = user ? cloudData.contacts : localContacts;

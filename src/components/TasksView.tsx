@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent} from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
   Dialog,
@@ -66,6 +66,7 @@ export function TasksView() {
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  console.log(tasks)
 
   const [formData, setFormData] = useState({
     title: "",

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
   Dialog,
@@ -97,7 +97,7 @@ export function ContactsView() {
     }));
 
   const contacts = normalizedContacts;
-  const setContacts = user ? () => {} : setLocalContacts;
+  // const setContacts = user ? () => {} : setLocalContacts;
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -138,7 +138,7 @@ export function ContactsView() {
     if (!contact) return false;
 
     const matchesSearch =
-      (contact.first_name || "")
+      (contact.firstName || "")
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       (contact.lastName || "")
@@ -520,10 +520,11 @@ export function ContactsView() {
                     </Label>
                     <Select
                       value={formData.preferredContact}
-                      onValueChange={(value: Contact["preferredContact"]) =>
+                      onValueChange={(value: string) =>
                         setFormData((prev) => ({
                           ...prev,
-                          preferredContact: value,
+                          preferredContact:
+                            value as Contact["preferredContact"],
                         }))
                       }
                     >
@@ -965,7 +966,7 @@ export function ContactsView() {
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <h4 className="font-medium">
-                            {contact.first_name || "Unknown"}{" "}
+                            {contact.firstName || "Unknown"}{" "}
                             {contact.lastName || ""}
                           </h4>
                           <p className="text-sm text-muted-foreground">

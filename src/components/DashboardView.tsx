@@ -64,12 +64,12 @@ export function DashboardView() {
 
   const recentContacts = contacts
     .filter(contact => contact && contact.createdAt)
-    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     .slice(0, 5)
 
   const upcomingTasks = tasks
     .filter(task => task && !task.completed && task.dueDate)
-    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
     .slice(0, 5)
 
   return (
