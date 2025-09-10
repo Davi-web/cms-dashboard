@@ -122,7 +122,7 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[100dvh] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading...</p>
@@ -138,7 +138,7 @@ function AppContent() {
   return (
     <>
       <SidebarProvider>
-        <div className="flex h-screen w-full">
+        <div className="flex min-h-[100dvh] w-full">
           <Sidebar>
             <SidebarHeader className="border-b p-4">
               <div className="flex items-center gap-2">
@@ -160,7 +160,7 @@ function AppContent() {
             </SidebarContent>
           </Sidebar>
 
-          <main className="flex-1 relative z-50 flex flex-col overflow-hidden">
+          <main className="flex-1 relative z-50 flex flex-col">
             <div className="flex h-full flex-col">
               <header className="flex items-center gap-2 border-b px-4 py-3 sticky top-0 z-50 bg-background">
                 <SidebarTrigger />
