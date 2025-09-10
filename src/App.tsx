@@ -83,7 +83,7 @@ function AppContent() {
       case "settings":
         return (
           <div className="p-6">
-            <h1>Settings</h1>
+            <h1 className="text-2xl font-semibold dark:text-white">Settings</h1>
             <div className="mt-6 space-y-4">
               <div className="p-4 border rounded-lg">
                 <h3 className="font-medium mb-2">Account</h3>
