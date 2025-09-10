@@ -148,7 +148,6 @@ class ApiClient {
     firstName: string,
     lastName: string
   ) {
-    console.log("API signup called:", email, firstName, lastName, password);
     return this.request("/auth/signup", {
       method: "POST",
       body: JSON.stringify({ email, password, firstName, lastName }),

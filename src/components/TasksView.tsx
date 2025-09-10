@@ -193,7 +193,6 @@ export function TasksView() {
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  console.log(tasks);
 
   const [formData, setFormData] = useState({
     title: "",
