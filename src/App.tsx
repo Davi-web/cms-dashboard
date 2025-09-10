@@ -129,7 +129,7 @@ function AppContent() {
                     <SidebarMenuButton
                       onClick={() => setActiveView(item.id)}
                       isActive={activeView === item.id}
-                      className="w-full justify-start"
+                      className="w-full justify-start cursor-pointer"
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.label}</span>

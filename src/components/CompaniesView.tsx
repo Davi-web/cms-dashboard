@@ -33,6 +33,8 @@ import {
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useCloudData } from "../hooks/useCloudData";
 import { useAuth } from "../contexts/AuthContext";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/utils/api";
 
 interface Company {
   id: string;
@@ -57,13 +59,64 @@ export function CompaniesView() {
     []
   );
   const [localContacts] = useLocalStorage("crm-contacts", []);
-
+  const queryClient = useQueryClient();
   // Use cloud data if authenticated, otherwise use local storage
-  const cloudData = useCloudData();
+  // const cloudData = useCloudData();
+  const {
+    data: companiesData,
+    isLoading: companiesLoading,
+    error: companiesError,
+  } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const res = await apiClient.getCompanies();
+      return res.companies;
+    },
+    enabled: !!user,
+  });
+  const {
+    data: contactsData,
+    isLoading: contactsLoading,
+    error: contactsError,
+  } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: async () => {
+      const res = await apiClient.getContacts();
+      return res.contacts;
+    },
+    enabled: !!user,
+  });
+
+  // Company mutations
+  const deleteCompanyMutation = useMutation({
+    mutationFn: (companyId: string) => apiClient.deleteCompany(companyId),
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+    },
+  });
+
+  const updateCompanyMutation = useMutation({
+    mutationFn: (data: { companyId: string; companyData: Partial<Company> }) =>
+      apiClient.updateCompany(data.companyId, data.companyData),
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+    },
+  });
+
+  const createCompanyMutation = useMutation({
+    mutationFn: (companyData: Omit<Company, "id" | "createdAt">) =>
+      apiClient.createCompany(companyData),
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+    },
+  });
   // console.log("Rendering companiesview", cloudData);
 
-  const companies = user ? cloudData.companies : localCompanies;
-  const contacts = user ? cloudData.contacts : localContacts;
+  const companies = user ? companiesData : localCompanies;
+  const contacts = user ? contactsData : localContacts;
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -83,7 +136,7 @@ export function CompaniesView() {
     notes: "",
   });
 
-  const filteredCompanies = companies.filter((company) => {
+  const filteredCompanies = companies?.filter((company) => {
     const matchesSearch =
       company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       company.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -96,7 +149,7 @@ export function CompaniesView() {
   });
 
   const getCompanyContactCount = (companyName: string) => {
-    return contacts.filter((contact) => contact.company === companyName).length;
+    return contacts?.filter((contact) => contact.company === companyName).length;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -120,9 +173,14 @@ export function CompaniesView() {
       if (user) {
         // Use cloud data
         if (editingCompany) {
-          await cloudData.updateCompany(editingCompany.id, companyData);
+          // await cloudData.updateCompany(editingCompany.id, companyData);
+          await updateCompanyMutation.mutateAsync({
+            companyId: editingCompany.id,
+            companyData,
+          });
         } else {
-          await cloudData.addCompany(companyData);
+          // await cloudData.addCompany(companyData);
+          await createCompanyMutation.mutateAsync(companyData);
         }
       } else {
         // Use local storage
@@ -188,7 +246,8 @@ export function CompaniesView() {
     if (confirm("Are you sure you want to delete this company?")) {
       try {
         if (user) {
-          await cloudData.deleteCompany(companyId);
+          // await cloudData.deleteCompany(companyId);
+          await deleteCompanyMutation.mutateAsync(companyId);
         } else {
           setLocalCompanies((prev) => prev.filter((c) => c.id !== companyId));
         }
@@ -465,7 +524,7 @@ export function CompaniesView() {
         </Select>
       </div>
 
-      {cloudData.loading ? (
+      {companiesLoading ? (
         <LoaderCircle className="mx-auto h-10 w-10 text-muted-foreground animate-spin" />
       ) : (
         <>

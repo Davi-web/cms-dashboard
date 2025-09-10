@@ -39,6 +39,8 @@ import {
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useCloudData } from "../hooks/useCloudData";
 import { useAuth } from "../contexts/AuthContext";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/utils/api";
 
 interface Activity {
   id: string;
@@ -84,12 +86,50 @@ export function ContactsView() {
     "crm-contacts",
     []
   );
+  const queryClient = useQueryClient();
 
-  // Use cloud data if authenticated, otherwise use local storage
-  const cloudData = useCloudData();
+  const {
+    data: cloudContacts,
+    isLoading,
+    error,
+  } = useQuery<Contact[]>({
+    queryKey: ["contacts"],
+    queryFn: async () => {
+      const res = await apiClient.getContacts();
+      return res.contacts;
+    },
+    enabled: !!user, // only fetch if user is authenticated
+    staleTime: 1000 * 60 * 5, // cache for 5 minutes
+  });
+  // // Use cloud data if authenticated, otherwise use local storage
+  // const cloudData = useCloudData();
+  const deleteContactMutation = useMutation({
+    mutationFn: (contactId: string) => apiClient.deleteContact(contactId),
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    },
+  });
+  const updateContactMutation = useMutation({
+    mutationFn: (data: { contactId: string; contactData: Partial<Contact> }) =>
+      apiClient.updateContact(data.contactId, data.contactData),
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    },
+  });
+  const createContactMutation = useMutation({
+    mutationFn: (
+      contactData: Omit<Contact, "id" | "createdAt" | "lastContact">
+    ) => apiClient.createContact(contactData),
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    },
+  });
 
   // Ensure all contacts have activities array (for backward compatibility)
-  const normalizedContacts = (user ? cloudData.contacts : localContacts)
+  const normalizedContacts = (user ? cloudContacts || [] : localContacts)
     .filter((contact) => contact != null && typeof contact === "object")
     .map((contact) => ({
       ...contact,
@@ -190,9 +230,19 @@ export function ContactsView() {
       if (user) {
         // Use cloud data
         if (editingContact) {
-          await cloudData.updateContact(editingContact.id, contactData);
+          // await useMutation({
+          //   mutationFn: () =>
+          //     apiClient.updateContact(editingContact.id, contactData),
+          // })
+          await updateContactMutation.mutateAsync({
+            contactId: editingContact.id,
+            contactData,
+          });
         } else {
-          await cloudData.addContact(contactData);
+          // await useMutation({
+          //   mutationFn: () => apiClient.createContact(contactData),
+          // })
+          await createContactMutation.mutateAsync(contactData);
         }
       } else {
         // Use local storage
@@ -290,7 +340,10 @@ export function ContactsView() {
     if (confirm("Are you sure you want to delete this contact?")) {
       try {
         if (user) {
-          await cloudData.deleteContact(contactId);
+          // await useMutation({
+          //   mutationFn: () => apiClient.deleteContact(contactId),
+          // })
+          await deleteContactMutation.mutateAsync(contactId);
         } else {
           setLocalContacts((prev) =>
             prev.filter((c) => c && c.id !== contactId)
@@ -335,8 +388,19 @@ export function ContactsView() {
     try {
       if (user) {
         // Use cloud data
-        await cloudData.updateContact(editingContact.id, {
-          activities: updatedActivities,
+        // await useMutation({
+        //   mutationFn: () =>
+        //     apiClient.updateContact(editingContact.id, {
+        //       activities: updatedActivities,
+        //       lastContact: new Date().toISOString(),
+        //     }),
+        // })
+        await updateContactMutation.mutateAsync({
+          contactId: editingContact.id,
+          contactData: {
+            activities: updatedActivities,
+            lastContact: new Date().toISOString(),
+          },
         });
       } else {
         // Use local storage
@@ -931,7 +995,7 @@ export function ContactsView() {
         </Select>
       </div>
 
-      {cloudData.loading ? (
+      {isLoading ? (
         <LoaderCircle className="animate-spin mx-auto h-8 w-8 text-muted-foreground" />
       ) : (
         <>

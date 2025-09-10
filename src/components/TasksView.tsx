@@ -34,6 +34,8 @@ import {
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useCloudData } from "../hooks/useCloudData";
 import { useAuth } from "../contexts/AuthContext";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/utils/api";
 
 interface Task {
   id: string;
@@ -57,10 +59,55 @@ export function TasksView() {
   const [localContacts] = useLocalStorage("crm-contacts", []);
 
   // Use cloud data if authenticated, otherwise use local storage
-  const cloudData = useCloudData();
+  // const cloudData = useCloudData();
+  const queryClient = useQueryClient();
 
-  const tasks = user ? cloudData.tasks : localTasks;
-  const contacts = user ? cloudData.contacts : localContacts;
+  const {data: tasksData, isLoading, error} = useQuery({
+    queryKey: ['tasks'],
+    queryFn: async () => {
+      const res = await apiClient.getTasks();
+      return res.tasks;
+    },
+    enabled: !!user,
+  })
+  const {data: contactsData} = useQuery({
+    queryKey: ['contacts'],
+    queryFn: async () => {
+      const res = await apiClient.getContacts();
+      return res.contacts;
+    },
+    enabled: !!user,
+  })
+
+  // Task mutations
+ const deleteTaskMutation = useMutation({
+    mutationFn: (taskId: string) =>
+        apiClient.deleteTask(taskId),
+    onSuccess: () => {
+        // Invalidate and refetch
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+});
+
+ const updateTaskMutation = useMutation({
+    mutationFn: (data: { taskId: string; taskData: Partial<Task> }) =>
+        apiClient.updateTask(data.taskId, data.taskData),
+    onSuccess: () => {
+        // Invalidate and refetch
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    }
+});
+
+ const createTaskMutation = useMutation({
+    mutationFn: (taskData: Omit<Task, "id" | "createdAt">) =>
+        apiClient.createTask(taskData),
+    onSuccess: () => {
+        // Invalidate and refetch
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    }
+});
+  const tasks = user ? tasksData : localTasks;
+  const contacts = user ? contactsData : localContacts;
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
@@ -78,7 +125,7 @@ export function TasksView() {
     dueDate: "",
   });
 
-  const filteredTasks = tasks.filter((task) => {
+  const filteredTasks = tasks?.filter((task) => {
     const matchesSearch =
       task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -96,7 +143,7 @@ export function TasksView() {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  const sortedTasks = filteredTasks.sort((a, b) => {
+  const sortedTasks = filteredTasks?.sort((a, b) => {
     if (a.completed !== b.completed) {
       return a.completed ? 1 : -1;
     }
@@ -106,7 +153,7 @@ export function TasksView() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const selectedContact = contacts.find((c) => c.id === formData.contactId);
+    const selectedContact = contacts?.find((c) => c.id === formData.contactId);
 
     const taskData = {
       title: formData.title,
@@ -128,9 +175,11 @@ export function TasksView() {
       if (user) {
         // Use cloud data
         if (editingTask) {
-          await cloudData.updateTask(editingTask.id, taskData);
+          // await cloudData.updateTask(editingTask.id, taskData);
+          await updateTaskMutation.mutateAsync({ taskId: editingTask.id, taskData });
         } else {
-          await cloudData.addTask(taskData);
+          // await cloudData.addTask(taskData);
+          await createTaskMutation.mutateAsync(taskData);
         }
       } else {
         // Use local storage
@@ -191,7 +240,8 @@ export function TasksView() {
     if (confirm("Are you sure you want to delete this task?")) {
       try {
         if (user) {
-          await cloudData.deleteTask(taskId);
+          // await cloudData.deleteTask(taskId);
+          await deleteTaskMutation.mutateAsync(taskId);
         } else {
           setLocalTasks((prev) => prev.filter((t) => t.id !== taskId));
         }
@@ -204,7 +254,7 @@ export function TasksView() {
 
   const toggleTaskCompletion = async (taskId: string) => {
     try {
-      const task = tasks.find((t) => t.id === taskId);
+      const task = tasks?.find((t) => t.id === taskId);
       if (!task) return;
 
       const updates = {
@@ -214,7 +264,8 @@ export function TasksView() {
       };
 
       if (user) {
-        await cloudData.updateTask(taskId, updates);
+        // await cloudData.updateTask(taskId, updates);
+        await updateTaskMutation.mutateAsync({ taskId, taskData: updates });
       } else {
         setLocalTasks((prev) =>
           prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
@@ -376,7 +427,7 @@ export function TasksView() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="None">No contact</SelectItem>
-                    {contacts.length > 0 &&
+                    {contacts && contacts.length > 0 &&
                       contacts.map((contact) => (
                         <SelectItem key={contact.id} value={contact.id}>
                           {contact.firstName} {contact.lastName}{" "}
@@ -454,11 +505,11 @@ export function TasksView() {
         </Select>
       </div>
 
-      {cloudData.loading ? (
+      {isLoading ? (
         <LoaderCircle className="mx-auto h-10 w-10 text-muted-foreground animate-spin" />
       ) : (
         <>
-          {sortedTasks.length === 0 ? (
+          {sortedTasks?.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
                 <CheckSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -482,7 +533,7 @@ export function TasksView() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {sortedTasks.map((task) => (
+              {sortedTasks?.map((task) => (
                 <Card
                   key={task.id}
                   className={`transition-all ${

@@ -82,6 +82,20 @@ const toSnakeCase = (obj: any) => {
   return result;
 };
 
+// Convert snake_case → camelCase
+const toCamelCase = (obj: any) => {
+  const result: any = {};
+  for (const key in obj) {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    result[camelKey] = obj[key];
+  }
+  return result;
+};
+
+// Convert array of objects
+const toCamelCaseArray = (arr: any[]) => arr.map(toCamelCase);
+
+
 class ApiClient {
   private accessToken: string | null = null;
 
@@ -113,7 +127,14 @@ class ApiClient {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json()
+
+      return {
+        ...data,
+        contacts: data.contacts ? toCamelCaseArray(data.contacts) : undefined,
+        companies: data.companies ? toCamelCaseArray(data.companies) : undefined,
+        tasks: data.tasks ? toCamelCaseArray(data.tasks) : undefined,
+      }
     } catch (error) {
       console.error(`API Error (${endpoint}):`, error);
       throw error;
