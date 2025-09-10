@@ -31,7 +31,7 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
-import { useCloudData } from "../hooks/useCloudData";
+// import { useCloudData } from "../hooks/useCloudData";
 import { useAuth } from "../contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/utils/api";
@@ -65,7 +65,6 @@ export function CompaniesView() {
   const {
     data: companiesData,
     isLoading: companiesLoading,
-    error: companiesError,
   } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
@@ -76,8 +75,7 @@ export function CompaniesView() {
   });
   const {
     data: contactsData,
-    isLoading: contactsLoading,
-    error: contactsError,
+
   } = useQuery({
     queryKey: ["contacts"],
     queryFn: async () => {
@@ -528,7 +526,7 @@ export function CompaniesView() {
         <LoaderCircle className="mx-auto h-10 w-10 text-muted-foreground animate-spin" />
       ) : (
         <>
-          {filteredCompanies.length === 0 ? (
+          {filteredCompanies?.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
                 <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -548,7 +546,7 @@ export function CompaniesView() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCompanies.map((company) => (
+              {filteredCompanies?.map((company) => (
                 <Card
                   key={company.id}
                   className="hover:shadow-md transition-shadow"

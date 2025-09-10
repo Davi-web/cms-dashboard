@@ -32,7 +32,7 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
-import { useCloudData } from "../hooks/useCloudData";
+// import { useCloudData } from "../hooks/useCloudData";
 import { useAuth } from "../contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/utils/api";
@@ -62,7 +62,7 @@ export function TasksView() {
   // const cloudData = useCloudData();
   const queryClient = useQueryClient();
 
-  const {data: tasksData, isLoading, error} = useQuery({
+  const {data: tasksData, isLoading} = useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
       const res = await apiClient.getTasks();

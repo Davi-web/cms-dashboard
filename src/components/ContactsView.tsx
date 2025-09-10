@@ -37,7 +37,7 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
-import { useCloudData } from "../hooks/useCloudData";
+// import { useCloudData } from "../hooks/useCloudData";
 import { useAuth } from "../contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/utils/api";
@@ -91,7 +91,6 @@ export function ContactsView() {
   const {
     data: cloudContacts,
     isLoading,
-    error,
   } = useQuery<Contact[]>({
     queryKey: ["contacts"],
     queryFn: async () => {
