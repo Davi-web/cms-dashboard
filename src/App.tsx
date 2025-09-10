@@ -160,7 +160,7 @@ function AppContent() {
             </SidebarContent>
           </Sidebar>
 
-          <main className="flex-1 relative z-50 flex flex-col">
+          <main className="flex-1 relative z-50 flex flex-col overflow-hidden">
             <div className="flex h-full flex-col">
               <header className="flex items-center gap-2 border-b px-4 py-3 sticky top-0 z-50 bg-background">
                 <SidebarTrigger />
