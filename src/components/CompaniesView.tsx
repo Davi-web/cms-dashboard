@@ -28,14 +28,25 @@ import {
   Trash2,
   MapPin,
   Globe,
-  LoaderCircle,
+  Loader2,
 } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 // import { useCloudData } from "../hooks/useCloudData";
 import { useAuth } from "../contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/utils/api";
-
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
 interface Company {
   id: string;
   name: string;
@@ -62,10 +73,7 @@ export function CompaniesView() {
   const queryClient = useQueryClient();
   // Use cloud data if authenticated, otherwise use local storage
   // const cloudData = useCloudData();
-  const {
-    data: companiesData,
-    isLoading: companiesLoading,
-  } = useQuery({
+  const { data: companiesData, isLoading: companiesLoading } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
       const res = await apiClient.getCompanies();
@@ -73,10 +81,7 @@ export function CompaniesView() {
     },
     enabled: !!user,
   });
-  const {
-    data: contactsData,
-
-  } = useQuery({
+  const { data: contactsData } = useQuery({
     queryKey: ["contacts"],
     queryFn: async () => {
       const res = await apiClient.getContacts();
@@ -147,7 +152,8 @@ export function CompaniesView() {
   });
 
   const getCompanyContactCount = (companyName: string) => {
-    return contacts?.filter((contact) => contact.company === companyName).length;
+    return contacts?.filter((contact) => contact.company === companyName)
+      .length;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -176,9 +182,11 @@ export function CompaniesView() {
             companyId: editingCompany.id,
             companyData,
           });
+          toast.success("Company has been updated");
         } else {
           // await cloudData.addCompany(companyData);
           await createCompanyMutation.mutateAsync(companyData);
+          toast.success("Company has been created");
         }
       } else {
         // Use local storage
@@ -201,7 +209,7 @@ export function CompaniesView() {
       setIsDialogOpen(false);
     } catch (error) {
       console.error("Error saving company:", error);
-      alert("Failed to save company. Please try again.");
+      toast.error("Failed to save company. Please try again.");
     }
   };
 
@@ -241,18 +249,17 @@ export function CompaniesView() {
   };
 
   const handleDelete = async (companyId: string) => {
-    if (confirm("Are you sure you want to delete this company?")) {
-      try {
-        if (user) {
-          // await cloudData.deleteCompany(companyId);
-          await deleteCompanyMutation.mutateAsync(companyId);
-        } else {
-          setLocalCompanies((prev) => prev.filter((c) => c.id !== companyId));
-        }
-      } catch (error) {
-        console.error("Error deleting company:", error);
-        alert("Failed to delete company. Please try again.");
+    try {
+      if (user) {
+        // await cloudData.deleteCompany(companyId);
+        await deleteCompanyMutation.mutateAsync(companyId);
+        toast.success("Company has been deleted");
+      } else {
+        setLocalCompanies((prev) => prev.filter((c) => c.id !== companyId));
       }
+    } catch (error) {
+      console.error("Error deleting company:", error);
+      toast.error("Failed to delete company. Please try again.");
     }
   };
 
@@ -482,7 +489,16 @@ export function CompaniesView() {
 
               <div className="flex gap-2 pt-4">
                 <Button type="submit" className="flex-1">
-                  {editingCompany ? "Update Company" : "Add Company"}
+                  {updateCompanyMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <span>
+                      {editingCompany ? "Update Company" : "Add Company"}
+                    </span>
+                  )}
                 </Button>
                 <Button
                   type="button"
@@ -523,7 +539,7 @@ export function CompaniesView() {
       </div>
 
       {companiesLoading ? (
-        <LoaderCircle className="mx-auto h-10 w-10 text-muted-foreground animate-spin" />
+        <Loader2 className="mx-auto h-10 w-10 text-muted-foreground animate-spin" />
       ) : (
         <>
           {filteredCompanies?.length === 0 ? (
@@ -624,14 +640,47 @@ export function CompaniesView() {
                         <Edit className="h-3 w-3 mr-1" />
                         Edit
                       </Button>
-                      <Button
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Delete {company.name}?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. It will permanently
+                              remove this company from our database.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="cursor-pointer">
+                              Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(company.id)}
+                              className="bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                            >
+                              Continue
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      {/* <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleDelete(company.id)}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-3 w-3" />
-                      </Button>
+                      </Button> */}
                     </div>
                   </CardContent>
                 </Card>

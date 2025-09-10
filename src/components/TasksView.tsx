@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Card, CardContent} from "./ui/card";
+import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
   Dialog,
@@ -19,6 +19,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
 import { Checkbox } from "./ui/checkbox";
 import {
   Plus,
@@ -29,13 +40,14 @@ import {
   User,
   Edit,
   Trash2,
-  LoaderCircle,
+  Loader2,
 } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 // import { useCloudData } from "../hooks/useCloudData";
 import { useAuth } from "../contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/utils/api";
+import { toast } from "sonner";
 
 interface Task {
   id: string;
@@ -62,50 +74,118 @@ export function TasksView() {
   // const cloudData = useCloudData();
   const queryClient = useQueryClient();
 
-  const {data: tasksData, isLoading} = useQuery({
-    queryKey: ['tasks'],
+  const { data: tasksData, isLoading } = useQuery({
+    queryKey: ["tasks"],
     queryFn: async () => {
       const res = await apiClient.getTasks();
       return res.tasks;
     },
     enabled: !!user,
-  })
-  const {data: contactsData} = useQuery({
-    queryKey: ['contacts'],
+  });
+  const { data: contactsData } = useQuery({
+    queryKey: ["contacts"],
     queryFn: async () => {
       const res = await apiClient.getContacts();
       return res.contacts;
     },
     enabled: !!user,
-  })
+  });
 
   // Task mutations
- const deleteTaskMutation = useMutation({
-    mutationFn: (taskId: string) =>
-        apiClient.deleteTask(taskId),
-    onSuccess: () => {
-        // Invalidate and refetch
-        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+  const deleteTaskMutation = useMutation({
+    mutationFn: (taskId: string) => apiClient.deleteTask(taskId),
+
+    onMutate: async (taskId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      const previousTasks = queryClient.getQueryData<Task[]>(["tasks"]);
+
+      // Optimistically remove the task
+      queryClient.setQueryData<Task[]>(["tasks"], (old = []) =>
+        old.filter((t) => t.id !== taskId)
+      );
+
+      return { previousTasks };
     },
-});
 
- const updateTaskMutation = useMutation({
+    onError: (_err, _taskId, context) => {
+      // Rollback
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["tasks"], context.previousTasks);
+      }
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+
+  const updateTaskMutation = useMutation({
     mutationFn: (data: { taskId: string; taskData: Partial<Task> }) =>
-        apiClient.updateTask(data.taskId, data.taskData),
-    onSuccess: () => {
-        // Invalidate and refetch
-        queryClient.invalidateQueries({ queryKey: ["tasks"] });
-    }
-});
+      apiClient.updateTask(data.taskId, data.taskData),
+    onMutate: async ({ taskId, taskData }) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      const previousTasks = queryClient.getQueryData<Task[]>(["tasks"]);
 
- const createTaskMutation = useMutation({
+      // Optimistically update
+      queryClient.setQueryData<Task[]>(["tasks"], (old = []) =>
+        old.map((t) => (t.id === taskId ? { ...t, ...taskData } : t))
+      );
+
+      return { previousTasks };
+    },
+
+    onError: (_err, _data, context) => {
+      // Rollback
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["tasks"], context.previousTasks);
+      }
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+
+  const createTaskMutation = useMutation({
     mutationFn: (taskData: Omit<Task, "id" | "createdAt">) =>
-        apiClient.createTask(taskData),
-    onSuccess: () => {
-        // Invalidate and refetch
-        queryClient.invalidateQueries({ queryKey: ["tasks"] });
-    }
-});
+      apiClient.createTask(taskData),
+
+    onMutate: async (newTask) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      const previousTasks = queryClient.getQueryData<Task[]>(["tasks"]);
+
+      // Temporary optimistic task
+      const optimisticTask: Task = {
+        ...newTask,
+        id: `temp-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<Task[]>(["tasks"], (old = []) => [
+        ...old,
+        optimisticTask,
+      ]);
+
+      return { previousTasks };
+    },
+
+    onError: (_err, _newTask, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["tasks"], context.previousTasks);
+      }
+    },
+
+    onSuccess: (data) => {
+      // Replace optimistic task with real one
+      queryClient.setQueryData<Task[]>(["tasks"], (old = []) =>
+        old.map((t) => (t.id.startsWith("temp-") ? data.task : t))
+      );
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
   const tasks = user ? tasksData : localTasks;
   const contacts = user ? contactsData : localContacts;
   const [searchTerm, setSearchTerm] = useState("");
@@ -113,7 +193,7 @@ export function TasksView() {
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  console.log(tasks)
+  console.log(tasks);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -176,10 +256,15 @@ export function TasksView() {
         // Use cloud data
         if (editingTask) {
           // await cloudData.updateTask(editingTask.id, taskData);
-          await updateTaskMutation.mutateAsync({ taskId: editingTask.id, taskData });
+          await updateTaskMutation.mutateAsync({
+            taskId: editingTask.id,
+            taskData,
+          });
+          toast.success("Task has been updated");
         } else {
           // await cloudData.addTask(taskData);
           await createTaskMutation.mutateAsync(taskData);
+          toast.success("Task has been added");
         }
       } else {
         // Use local storage
@@ -202,7 +287,7 @@ export function TasksView() {
       setIsDialogOpen(false);
     } catch (error) {
       console.error("Error saving task:", error);
-      alert("Failed to save task. Please try again.");
+      toast.error("Failed to save task. Please try again.");
     }
   };
 
@@ -237,18 +322,17 @@ export function TasksView() {
   };
 
   const handleDelete = async (taskId: string) => {
-    if (confirm("Are you sure you want to delete this task?")) {
-      try {
-        if (user) {
-          // await cloudData.deleteTask(taskId);
-          await deleteTaskMutation.mutateAsync(taskId);
-        } else {
-          setLocalTasks((prev) => prev.filter((t) => t.id !== taskId));
-        }
-      } catch (error) {
-        console.error("Error deleting task:", error);
-        alert("Failed to delete task. Please try again.");
+    try {
+      if (user) {
+        // await cloudData.deleteTask(taskId);
+        await deleteTaskMutation.mutateAsync(taskId);
+        toast.success("Task has been deleted");
+      } else {
+        setLocalTasks((prev) => prev.filter((t) => t.id !== taskId));
       }
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast.error("Failed to delete task. Please try again.");
     }
   };
 
@@ -273,7 +357,7 @@ export function TasksView() {
       }
     } catch (error) {
       console.error("Error updating task:", error);
-      alert("Failed to update task. Please try again.");
+      toast.error("Failed to update task. Please try again.");
     }
   };
 
@@ -427,7 +511,8 @@ export function TasksView() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="None">No contact</SelectItem>
-                    {contacts && contacts.length > 0 &&
+                    {contacts &&
+                      contacts.length > 0 &&
                       contacts.map((contact) => (
                         <SelectItem key={contact.id} value={contact.id}>
                           {contact.firstName} {contact.lastName}{" "}
@@ -456,7 +541,14 @@ export function TasksView() {
 
               <div className="flex gap-2 pt-4">
                 <Button type="submit" className="flex-1">
-                  {editingTask ? "Update Task" : "Add Task"}
+                  {updateTaskMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <span>{editingTask ? "Update Task" : "Add Task"}</span>
+                  )}
                 </Button>
                 <Button
                   type="button"
@@ -506,7 +598,7 @@ export function TasksView() {
       </div>
 
       {isLoading ? (
-        <LoaderCircle className="mx-auto h-10 w-10 text-muted-foreground animate-spin" />
+        <Loader2 className="mx-auto h-10 w-10 text-muted-foreground animate-spin" />
       ) : (
         <>
           {sortedTasks?.length === 0 ? (
@@ -549,7 +641,7 @@ export function TasksView() {
                       <Checkbox
                         checked={task.completed}
                         onCheckedChange={() => toggleTaskCompletion(task.id)}
-                        className="mt-1"
+                        className="mt-1 cursor-pointer"
                       />
 
                       <div className="flex-1 min-w-0">
@@ -632,14 +724,47 @@ export function TasksView() {
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
-                        <Button
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete {task.title}?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. It will
+                                permanently remove this task from our database.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="cursor-pointer">
+                                Cancel
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(task.id)}
+                                className="bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                              >
+                                Continue
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        {/* <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleDelete(task.id)}
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-3 w-3" />
-                        </Button>
+                        </Button> */}
                       </div>
                     </div>
                   </CardContent>

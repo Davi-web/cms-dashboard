@@ -13,6 +13,17 @@ import {
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -34,13 +45,14 @@ import {
   FileText,
   CheckSquare,
   Clock,
-  LoaderCircle,
+  Loader2,
 } from "lucide-react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 // import { useCloudData } from "../hooks/useCloudData";
 import { useAuth } from "../contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/utils/api";
+import { toast } from "sonner";
 
 interface Activity {
   id: string;
@@ -88,10 +100,7 @@ export function ContactsView() {
   );
   const queryClient = useQueryClient();
 
-  const {
-    data: cloudContacts,
-    isLoading,
-  } = useQuery<Contact[]>({
+  const { data: cloudContacts, isLoading } = useQuery<Contact[]>({
     queryKey: ["contacts"],
     queryFn: async () => {
       const res = await apiClient.getContacts();
@@ -237,11 +246,13 @@ export function ContactsView() {
             contactId: editingContact.id,
             contactData,
           });
+          toast.success("Contact has been updated");
         } else {
           // await useMutation({
           //   mutationFn: () => apiClient.createContact(contactData),
           // })
           await createContactMutation.mutateAsync(contactData);
+          toast.success("Contact has been created");
         }
       } else {
         // Use local storage
@@ -266,7 +277,7 @@ export function ContactsView() {
       setIsDialogOpen(false);
     } catch (error) {
       console.error("Error saving contact:", error);
-      alert("Failed to save contact. Please try again.");
+      toast.error("Failed to save contact. Please try again.");
     }
   };
 
@@ -336,22 +347,19 @@ export function ContactsView() {
   };
 
   const handleDelete = async (contactId: string) => {
-    if (confirm("Are you sure you want to delete this contact?")) {
-      try {
-        if (user) {
-          // await useMutation({
-          //   mutationFn: () => apiClient.deleteContact(contactId),
-          // })
-          await deleteContactMutation.mutateAsync(contactId);
-        } else {
-          setLocalContacts((prev) =>
-            prev.filter((c) => c && c.id !== contactId)
-          );
-        }
-      } catch (error) {
-        console.error("Error deleting contact:", error);
-        alert("Failed to delete contact. Please try again.");
+    try {
+      if (user) {
+        // await useMutation({
+        //   mutationFn: () => apiClient.deleteContact(contactId),
+        // })
+        await deleteContactMutation.mutateAsync(contactId);
+        toast.success("Contact has been deleted");
+      } else {
+        setLocalContacts((prev) => prev.filter((c) => c && c.id !== contactId));
       }
+    } catch (error) {
+      console.error("Error deleting contact:", error);
+      toast.error("Failed to delete contact. Please try again.");
     }
   };
 
@@ -401,6 +409,7 @@ export function ContactsView() {
             lastContact: new Date().toISOString(),
           },
         });
+        toast.success("Activity added");
       } else {
         // Use local storage
         setLocalContacts((prev) =>
@@ -429,7 +438,7 @@ export function ContactsView() {
       });
     } catch (error) {
       console.error("Error adding activity:", error);
-      alert("Failed to add activity. Please try again.");
+      toast.error("Failed to add activity. Please try again.");
     }
   };
 
@@ -955,7 +964,16 @@ export function ContactsView() {
 
               <div className="flex gap-2 pt-4">
                 <Button type="submit" className="flex-1">
-                  {editingContact ? "Update Contact" : "Add Contact"}
+                  {updateContactMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <span>
+                      {editingContact ? "Update Contact" : "Add Contact"}
+                    </span>
+                  )}
                 </Button>
                 <Button
                   type="button"
@@ -995,7 +1013,7 @@ export function ContactsView() {
       </div>
 
       {isLoading ? (
-        <LoaderCircle className="animate-spin mx-auto h-8 w-8 text-muted-foreground" />
+        <Loader2 className="animate-spin mx-auto h-8 w-8 text-muted-foreground" />
       ) : (
         <>
           {filteredContacts.length === 0 ? (
@@ -1146,14 +1164,47 @@ export function ContactsView() {
                           <Edit className="h-3 w-3 mr-1" />
                           Edit
                         </Button>
-                        <Button
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete {contact.firstName} {contact.lastName}?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. It will
+                                permanently remove this contact from our database.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="cursor-pointer">
+                                Cancel
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(contact.id)}
+                                className="bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                              >
+                                Continue
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        {/* <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleDelete(contact.id)}
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-3 w-3" />
-                        </Button>
+                        </Button> */}
                       </div>
                     </CardContent>
                   </Card>
