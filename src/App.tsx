@@ -140,7 +140,7 @@ function AppContent() {
       <SidebarProvider>
         <div className="flex h-screen w-full">
           <Sidebar>
-            <SidebarHeader className="border-b p-4 z-50">
+            <SidebarHeader className="border-b p-4">
               <div className="flex items-center gap-2">
                 <h2 className="font-semibold">RelationshipCMS</h2>
               </div>
@@ -162,7 +162,7 @@ function AppContent() {
 
           <main className="flex-1 overflow-hidden">
             <div className="flex h-full flex-col">
-              <header className="flex items-center gap-2 border-b px-4 py-3">
+              <header className="flex items-center gap-2 border-b px-4 py-3 top-0 z-50 sticky">
                 <SidebarTrigger />
                 <h1 className="capitalize">{activeView}</h1>
               </header>
