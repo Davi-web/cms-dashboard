@@ -111,7 +111,7 @@ function AppContent() {
       <SidebarProvider>
         <div className="flex h-screen w-full">
           <Sidebar>
-            <SidebarHeader className="border-b p-4">
+            <SidebarHeader className="border-b p-4 z-50">
               <div className="flex items-center gap-2">
                 <h2 className="font-semibold">RelationshipCMS</h2>
               </div>
