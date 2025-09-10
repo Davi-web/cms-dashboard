@@ -60,7 +60,6 @@ export function DashboardView() {
   const tasks = (user ? tasksData : localTasks).filter(
     (t) => t != null && typeof t === "object"
   );
-  console.log(contacts, companies, tasks);
 
   // Stats
   const stats = [
