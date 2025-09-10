@@ -90,7 +90,13 @@ function AppContent() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Signed in as: {user?.email}
                 </p>
-                <Button onClick={signOut} variant="outline">
+                <Button
+                  onClick={async () => {
+                    await signOut();
+                    setActiveView("dashboard");
+                  }}
+                  variant="outline"
+                >
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
                 </Button>

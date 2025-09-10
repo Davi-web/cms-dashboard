@@ -74,7 +74,7 @@ export function CompaniesView() {
   // Use cloud data if authenticated, otherwise use local storage
   // const cloudData = useCloudData();
   const { data: companiesData, isLoading: companiesLoading } = useQuery({
-    queryKey: ["companies"],
+    queryKey: ["companies", user?.id],
     queryFn: async () => {
       const res = await apiClient.getCompanies();
       return res.companies;
@@ -82,7 +82,7 @@ export function CompaniesView() {
     enabled: !!user,
   });
   const { data: contactsData } = useQuery({
-    queryKey: ["contacts"],
+    queryKey: ["contacts", user?.id],
     queryFn: async () => {
       const res = await apiClient.getContacts();
       return res.contacts;

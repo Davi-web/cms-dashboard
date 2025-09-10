@@ -101,7 +101,7 @@ export function ContactsView() {
   const queryClient = useQueryClient();
 
   const { data: cloudContacts, isLoading } = useQuery<Contact[]>({
-    queryKey: ["contacts"],
+    queryKey: ["contacts", user?.id],
     queryFn: async () => {
       const res = await apiClient.getContacts();
       return res.contacts;

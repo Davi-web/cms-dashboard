@@ -77,7 +77,7 @@ export function TasksView() {
   const queryClient = useQueryClient();
 
   const { data: tasksData, isLoading } = useQuery({
-    queryKey: ["tasks"],
+    queryKey: ["tasks", user?.id],
     queryFn: async () => {
       const res = await apiClient.getTasks();
       return res.tasks;
@@ -85,7 +85,7 @@ export function TasksView() {
     enabled: !!user,
   });
   const { data: contactsData } = useQuery({
-    queryKey: ["contacts"],
+    queryKey: ["contacts", user?.id],
     queryFn: async () => {
       const res = await apiClient.getContacts();
       return res.contacts;

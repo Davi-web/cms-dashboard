@@ -20,7 +20,7 @@ export function DashboardView() {
   const [localTasks] = useLocalStorage("crm-tasks", []);
 
   const { data: contactsData = [], isLoading: contactsLoading } = useQuery({
-    queryKey: ["contacts"],
+    queryKey: ["contacts", user?.id],
     queryFn: async () => {
       const res = await apiClient.getContacts();
       return res.contacts;
@@ -31,7 +31,7 @@ export function DashboardView() {
   const { data: companiesData = [], isLoading: companiesLoading } = useQuery<
     Company[]
   >({
-    queryKey: ["companies"],
+    queryKey: ["companies", user?.id],
     queryFn: async () => {
       const res = await apiClient.getCompanies();
       return res.companies;
@@ -40,7 +40,7 @@ export function DashboardView() {
   });
 
   const { data: tasksData = [], isLoading: tasksLoading } = useQuery({
-    queryKey: ["tasks"],
+    queryKey: ["tasks", user?.id],
     queryFn: async () => {
       const res = await apiClient.getTasks();
       return res.tasks;
